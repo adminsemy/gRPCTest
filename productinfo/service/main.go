@@ -37,6 +37,7 @@ func (s *server) AddProduct(ctx context.Context, in *pb.Product) (*pb.ProductID,
 func (s *server) GetProduct(ctx context.Context, in *pb.ProductID) (*pb.Product, error) {
 	value, ok := s.productMap[in.Value]
 	if ok {
+		log.Println(value)
 		return value, status.New(codes.OK, "").Err()
 	}
 	return nil, status.Errorf(codes.NotFound, "Product does not exist.", in.Value)
