@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net"
-
 	pb "productinfo/service/ecommerce"
 
 	"google.golang.org/grpc"
@@ -20,4 +19,8 @@ func main() {
 	}
 	s := grpc.NewServer()
 	pb.RegisterProductInfoServer(s, &server{})
+	log.Printf("Started gRPC lestener on port " + port)
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }
