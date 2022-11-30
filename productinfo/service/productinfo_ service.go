@@ -11,6 +11,7 @@ import (
 
 type server struct {
 	productMap map[string]*pb.Product
+	pb.UnimplementedProductInfoServer
 }
 
 func (s *server) AddProduct(ctx context.Context, in *pb.Product) (*pb.ProductID, error) {

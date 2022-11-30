@@ -4,7 +4,7 @@
 // - protoc             v3.12.4
 // source: ecommerce/product_info.proto
 
-package ecommerce
+package main
 
 import (
 	context "context"
