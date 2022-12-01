@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io"
 	"log"
 	"time"
 
@@ -23,11 +24,21 @@ func main() {
 	defer conn.Close()
 	c := orderManager.NewOrderManagerClient(conn)
 	id := &wrappers.StringValue{Value: "3"}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 	order, err := c.GetOrder(ctx, id)
 	if err != nil {
 		log.Fatalf("Could not Order ID %v: %v", id.Value, err)
 	}
 	log.Println("Order - ", order)
+	searchStream, _ := c.SearchOrders(ctx, id)
+
+	for {
+		searchOrder, err := searchStream.Recv()
+		log.Println("Search result: ", searchOrder)
+		if err == io.EOF {
+			break
+		}
+	}
+
 }
