@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 	orderManager "ordermagager/server/ecommerce/proto"
+	"strings"
 
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/grpc"
@@ -27,6 +29,24 @@ func (s *server) GetOrder(ctx context.Context, id *wrappers.StringValue) (*order
 		return order, status.New(codes.OK, "").Err()
 	}
 	return nil, status.Errorf(codes.NotFound, "Order %v not found", id.Value)
+}
+
+func (s *server) SearchOrders(searchQuery *wrappers.StringValue,
+	stream orderManager.OrderManager_SearchOrdersServer) error {
+	for key, order := range s.orders {
+		log.Print(key, order)
+		for _, itemStr := range order.Items {
+			log.Print(itemStr)
+			if strings.Contains(itemStr, searchQuery.Value) {
+				err := stream.Send(order)
+				if err != nil {
+					return fmt.Errorf("error send message to stream: %v", err)
+				}
+				log.Println("Matching Order Found: ", key)
+			}
+		}
+	}
+	return nil
 }
 
 func main() {
