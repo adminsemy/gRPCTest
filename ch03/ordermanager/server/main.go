@@ -21,7 +21,7 @@ type server struct {
 	orderManager.UnimplementedOrderManagerServer
 }
 
-func (s *server) getOrder(ctx context.Context, id *wrappers.StringValue) (*orderManager.Order, error) {
+func (s *server) GetOrder(ctx context.Context, id *wrappers.StringValue) (*orderManager.Order, error) {
 	order, ok := s.orders[id.Value]
 	if ok {
 		return order, status.New(codes.OK, "").Err()
