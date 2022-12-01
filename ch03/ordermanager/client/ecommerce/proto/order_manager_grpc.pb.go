@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type OrderManagerClient interface {
 	GetOrder(ctx context.Context, in *wrappers.StringValue, opts ...grpc.CallOption) (*Order, error)
+	SearchOrders(ctx context.Context, in *wrappers.StringValue, opts ...grpc.CallOption) (OrderManager_SearchOrdersClient, error)
 }
 
 type orderManagerClient struct {
@@ -43,11 +44,44 @@ func (c *orderManagerClient) GetOrder(ctx context.Context, in *wrappers.StringVa
 	return out, nil
 }
 
+func (c *orderManagerClient) SearchOrders(ctx context.Context, in *wrappers.StringValue, opts ...grpc.CallOption) (OrderManager_SearchOrdersClient, error) {
+	stream, err := c.cc.NewStream(ctx, &OrderManager_ServiceDesc.Streams[0], "/ecommerce.OrderManager/searchOrders", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &orderManagerSearchOrdersClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type OrderManager_SearchOrdersClient interface {
+	Recv() (*Order, error)
+	grpc.ClientStream
+}
+
+type orderManagerSearchOrdersClient struct {
+	grpc.ClientStream
+}
+
+func (x *orderManagerSearchOrdersClient) Recv() (*Order, error) {
+	m := new(Order)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // OrderManagerServer is the server API for OrderManager service.
 // All implementations must embed UnimplementedOrderManagerServer
 // for forward compatibility
 type OrderManagerServer interface {
 	GetOrder(context.Context, *wrappers.StringValue) (*Order, error)
+	SearchOrders(*wrappers.StringValue, OrderManager_SearchOrdersServer) error
 	mustEmbedUnimplementedOrderManagerServer()
 }
 
@@ -57,6 +91,9 @@ type UnimplementedOrderManagerServer struct {
 
 func (UnimplementedOrderManagerServer) GetOrder(context.Context, *wrappers.StringValue) (*Order, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetOrder not implemented")
+}
+func (UnimplementedOrderManagerServer) SearchOrders(*wrappers.StringValue, OrderManager_SearchOrdersServer) error {
+	return status.Errorf(codes.Unimplemented, "method SearchOrders not implemented")
 }
 func (UnimplementedOrderManagerServer) mustEmbedUnimplementedOrderManagerServer() {}
 
@@ -89,6 +126,27 @@ func _OrderManager_GetOrder_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrderManager_SearchOrders_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(wrappers.StringValue)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(OrderManagerServer).SearchOrders(m, &orderManagerSearchOrdersServer{stream})
+}
+
+type OrderManager_SearchOrdersServer interface {
+	Send(*Order) error
+	grpc.ServerStream
+}
+
+type orderManagerSearchOrdersServer struct {
+	grpc.ServerStream
+}
+
+func (x *orderManagerSearchOrdersServer) Send(m *Order) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // OrderManager_ServiceDesc is the grpc.ServiceDesc for OrderManager service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -101,6 +159,12 @@ var OrderManager_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _OrderManager_GetOrder_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "searchOrders",
+			Handler:       _OrderManager_SearchOrders_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "proto/order_manager.proto",
 }
