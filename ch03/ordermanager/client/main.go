@@ -86,4 +86,43 @@ func main() {
 	}
 	log.Printf("Updates Orders Res: %s", updateRes)
 
+	streamingOrder, err := c.ProcessOrders(ctx)
+	if err != nil {
+		log.Fatalf("%v.ProcessOrders(_) = _, %v", c, err)
+	}
+
+	if err := streamingOrder.Send(&wrappers.StringValue{Value: "1"}); err != nil {
+		log.Fatalf("%v.Send(%v) = %v", c, "1", err)
+	}
+	if err := streamingOrder.Send(&wrappers.StringValue{Value: "2"}); err != nil {
+		log.Fatalf("%v.Send(%v) = %v", c, "2", err)
+	}
+	if err := streamingOrder.Send(&wrappers.StringValue{Value: "3"}); err != nil {
+		log.Fatalf("%v.Send(%v) = %v", c, "3", err)
+	}
+	channel := make(chan struct{})
+	go asnsClientBidirectionalRPC(streamingOrder, channel)
+	time.Sleep(time.Millisecond * 1000)
+
+	if err := streamingOrder.Send(&wrappers.StringValue{Value: "1"}); err != nil {
+		log.Fatalf("%v.Send(%v) = %v", c, "1", err)
+	}
+
+	if err := streamingOrder.CloseSend(); err != nil {
+		log.Fatal(err)
+	}
+
+	channel <- struct{}{}
+
+}
+
+func asnsClientBidirectionalRPC(streamProdOrder orderManager.OrderManager_ProcessOrdersClient, c chan struct{}) {
+	for {
+		combinedShipment, err := streamProdOrder.Recv()
+		if err == io.EOF {
+			break
+		}
+		log.Print("Combined Shipment: ", combinedShipment.OrdersList)
+	}
+	<-c
 }
