@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	orderManager "ordermagager/server/ecommerce/proto"
@@ -49,6 +50,19 @@ func (s *server) SearchOrders(searchQuery *wrappers.StringValue,
 		time.Sleep(time.Second)
 	}
 	return nil
+}
+
+func (s *server) UpdateOrders(stream orderManager.OrderManager_UpdateOrdersServer) error {
+	ordersStr := "Update Order is: "
+	for {
+		order, err := stream.Recv()
+		if err == io.EOF {
+			return stream.SendAndClose(&wrappers.StringValue{Value: "Orders processed " + ordersStr})
+		}
+		s.orders[order.Id] = order
+		log.Print("Order ID ", order.Id, ": updated!")
+		ordersStr += order.Id + ", "
+	}
 }
 
 func main() {
