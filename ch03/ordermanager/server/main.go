@@ -62,6 +62,7 @@ func (s *server) UpdateOrders(stream orderManager.OrderManager_UpdateOrdersServe
 		s.orders[order.Id] = order
 		log.Print("Order ID ", order.Id, ": updated!")
 		ordersStr += order.Id + ", "
+		time.Sleep(time.Second)
 	}
 }
 
