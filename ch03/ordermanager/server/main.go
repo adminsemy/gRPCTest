@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	port = ":50051"
+	port           = ":50051"
+	orderBatchSize = 3
 )
 
 type server struct {
@@ -63,6 +64,51 @@ func (s *server) UpdateOrders(stream orderManager.OrderManager_UpdateOrdersServe
 		log.Print("Order ID ", order.Id, ": updated!")
 		ordersStr += order.Id + ", "
 		time.Sleep(time.Second)
+	}
+}
+
+func (s *server) ProcessOrders(stream orderManager.OrderManager_ProcessOrdersServer) error {
+	var combinedShipmentMap = make(map[string]*orderManager.CombinedShipment)
+	batchMarker := 1
+	for {
+		orderId, err := stream.Recv()
+		if err == io.EOF {
+			for _, comb := range combinedShipmentMap {
+				stream.Send(comb)
+			}
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		destination := s.orders[orderId.GetValue()].Destination
+		shipment, ok := combinedShipmentMap[destination]
+		if ok {
+			ord := s.orders[orderId.GetValue()]
+			shipment.OrdersList = append(shipment.OrdersList, ord)
+			combinedShipmentMap[destination] = shipment
+		} else {
+			comShip := orderManager.CombinedShipment{
+				Id:     "cmb - " + (s.orders[orderId.GetValue()].Destination),
+				Status: "Processed",
+			}
+			ord := s.orders[orderId.GetValue()]
+			comShip.OrdersList = append(comShip.OrdersList, ord)
+			combinedShipmentMap[destination] = &comShip
+			log.Print(len(comShip.OrdersList), comShip.GetId())
+		}
+		if batchMarker == orderBatchSize {
+			for _, comb := range combinedShipmentMap {
+				log.Printf("Shipping: %v -> %v", comb.Id, len(comb.OrdersList))
+				if err := stream.Send(comb); err != nil {
+					return err
+				}
+			}
+			batchMarker = 0
+			combinedShipmentMap = make(map[string]*orderManager.CombinedShipment)
+		} else {
+			batchMarker++
+		}
 	}
 }
 
