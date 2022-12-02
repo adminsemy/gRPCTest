@@ -24,7 +24,7 @@ func main() {
 	defer conn.Close()
 	c := orderManager.NewOrderManagerClient(conn)
 	id := &wrappers.StringValue{Value: "3"}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	order, err := c.GetOrder(ctx, id)
 	if err != nil {
@@ -35,6 +35,9 @@ func main() {
 
 	for {
 		searchOrder, err := searchStream.Recv()
+		if searchOrder == nil {
+			break
+		}
 		log.Println("Search result: ", searchOrder)
 		if err == io.EOF {
 			break

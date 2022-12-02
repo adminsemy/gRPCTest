@@ -7,6 +7,7 @@ import (
 	"net"
 	orderManager "ordermagager/server/ecommerce/proto"
 	"strings"
+	"time"
 
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/grpc"
@@ -45,6 +46,7 @@ func (s *server) SearchOrders(searchQuery *wrappers.StringValue,
 				log.Println("Matching Order Found: ", key)
 			}
 		}
+		time.Sleep(time.Second)
 	}
 	return nil
 }
